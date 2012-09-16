@@ -26,7 +26,8 @@ abstract class Core{
 	 */
 	private $dbconn;
 	private $debugger;
-	private $supportEmail = "support@kamkash.com";
+	private $supportEmail = "your-support@email.com";
+	private $YOUR_ERROR_REPORT_EMAIL = "your-error@email.com"
 	private $birthtime;
 	private $dispEngine;
 	private $objectStore;
@@ -107,8 +108,8 @@ abstract class Core{
 		$techInfo = "\n--------\nIP: $ip\nURL: $URL\nSession SHA: $sessionSHA\nUser Agent String: $userAgent\nServer Timestamp: $serverTime\n---- END OF REPORT ----";
 		$errMsg = new kkMailMessage($this);
 		$errMsg->setSubject("Error: ".$errSubject);
-		$errMsg->setFrom("KK Error Report <support@kamkash.com>");
-		$errMsg->setTo("support@venuemirror.com");
+		$errMsg->setFrom("Error Report <".$YOUR_ERROR_REPORT_EMAIL.">");
+		$errMsg->setTo($YOUR_ERROR_REPORT_EMAIL);
 		$errMsg->setTextBody("---- REPORT STARTS ----\n".$errorMsg.$techInfo);
 		$errMsg->setMsgType("Error Report");
 		$errMsg->makeMessageReady();

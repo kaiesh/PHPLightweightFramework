@@ -62,13 +62,19 @@ abstract class DatabaseObject{
 	}
 
 	protected function save(){
+		$count = 0;
 		$query = "UPDATE ".$this->table." SET ";
-		foreach ($this->dbArr as $key->$value){
+		foreach ($this->dbArr as $key=>$value){
 			if ($key != $this->primaryKey){
+				if ($count > 0){
+					$query .=",";
+				}
 				$query .= $key."='".$value."' ";
+				$count++;
 			}
 		}
 		$query .= " WHERE ".$this->primaryKey."='".$this->dbArr[$this->primaryKey]."';";
+		//echo $query;
 		$this->core->db($query);
 	}
 }

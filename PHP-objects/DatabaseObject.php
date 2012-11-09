@@ -10,9 +10,8 @@
 * row, and providing support to get, set, and save that data, while protecting
 * the primary key.
 *
-* Version 1 of the object only holds support for simple objects with one field
-* as the unique key. Future versions can be developed to support multiple
-* fields through the use of arrays.
+* This is v2 of the object that accepts arrays as primary keys. It is backward
+* compatible with v1 that takes primitives
 ****************************************************************************/
 
 abstract class DatabaseObject{
@@ -31,8 +30,22 @@ abstract class DatabaseObject{
 		$this->primaryKey = $primaryKeyName;
 		$this->table = $tableName;
 
-		if ((!$dbRow)||($dbRow->$primaryKeyName!=$primaryKeyValue)) {
-			$query = "SELECT * FROM ".$tableName." WHERE ".$primaryKeyName."='".$primaryKeyValue."';";
+		if ((is_array($primaryKeyName))&&(is_array($primaryKeyValue))){
+			$whereClause = " WHERE ";
+			//assumes arrays are of the same length
+			$arrSize = sizeof($primaryKeyName);
+			for ($i=0; $i< $arrSize; $i++){
+				if ($i > 0){
+					$whereClause .= " AND";
+				}
+				$whereClause .= " ".$primaryKeyName[$i]."='".$primaryKeyValue[$i]."'";
+			}
+			$whereClause .=";";
+		}else{
+			$whereClause = " WHERE ".$primaryKeyName."='".$primaryKeyValue."';";
+		}
+		if (!$dbRow){
+			$query = "SELECT * FROM ".$tableName." ".$whereClause;
 			$res = $this->core->db($query);
 			if (mysql_num_rows($res)==1){
 				$dbArr = array();
@@ -64,8 +77,16 @@ abstract class DatabaseObject{
 	protected function save(){
 		$count = 0;
 		$query = "UPDATE ".$this->table." SET ";
+		if (is_array($this->primaryKey)){
+			$arrayCheck = true;
+		}else{
+			$arrayCheck = false;
+		}
+
 		foreach ($this->dbArr as $key=>$value){
-			if ($key != $this->primaryKey){
+			if ((($arrayCheck)&&(in_array($key, $this->primaryKey)))||((!$arrayCheck)&&($key == $this->primaryKey))){
+				//primary keys can not be changed with this method
+			}else{
 				if ($count > 0){
 					$query .=",";
 				}

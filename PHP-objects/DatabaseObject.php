@@ -1,6 +1,6 @@
 <?
 /****************************************************************************
-* DatabaseObject
+* DatabaseObject v3
 *
 * Not to be confused with the Database file, this abstract class is designed
 * to allow for objects to be defined as unique database rows/records and
@@ -10,8 +10,12 @@
 * row, and providing support to get, set, and save that data, while protecting
 * the primary key.
 *
-* This is v2 of the object that accepts arrays as primary keys. It is backward
+* V2 of the object accepts arrays as primary keys. It is backward
 * compatible with v1 that takes primitives
+*
+* V3 of the object allows for a new entry to be added to the DB, but only
+* if there is one primary key - v4 will need to allow for multiple primary
+* keys when adding.
 ****************************************************************************/
 
 abstract class DatabaseObject{
@@ -56,7 +60,7 @@ abstract class DatabaseObject{
 		}
 		$varArr = get_object_vars($dbRow);
 		foreach ($varArr as $key=>$value){
-			$this->core->getDebugger()->debug("Loading: ".$key." -> ".$value);
+			//$this->core->getDebugger()->debug("Loading: ".$key." -> ".$value);
 			$this->dbArr[$key] = $value;
 		}
 	}
@@ -98,6 +102,37 @@ abstract class DatabaseObject{
 		//echo $query;
 		$this->core->db($query);
 	}
+  protected static function makeNew(Core &$core, $tableName, $primaryKey, $assocArr, $objectType){
+  $core->getDebugger()->debug("DatabaseObject::makeNew called with ".sizeof($assocArr)." elements in the associative array");
+   $keyString = "";
+   $valueString = "";
+   foreach ($assocArr as $key=>$value){
+     if ($keyString!=""){
+       $keyString .=",";
+     }
+     $keyString .= $key;
+     
+     if ($valueString!=""){
+       $valueString .= ",";
+     }
+     $valueString.="'".$value."'";
+   }
+   $ins = "INSERT INTO ".$tableName." (".$keyString.") VALUES (".$valueString.");";
+   $res = $core->db($ins);
+   if ($res){
+     $getInsert = "SELECT * FROM ".$tableName." WHERE ".$primaryKey."='".$core->dbLastInsertID()."';";
+     $giRes = $core->db($getInsert);
+      if (($giRes)&&(mysql_num_rows($giRes)==1)){
+        $giObj = mysql_fetch_object($giRes);
+        $newObj = new $objectType($core, $giObj->$primaryKey, $giObj, true);
+        return $newObj;
+      }else{
+        throw new Exception("Unable to locate newly inserted record");
+      }
+    }else{
+      throw new Exception("Unable to create new entry");
+    }
+  }
 }
 
 ?>

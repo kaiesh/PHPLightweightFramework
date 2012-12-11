@@ -31,6 +31,11 @@ class kkMailMessage{
 
 	private $copyAdmin;
 
+	private $SmtpServer;
+	private $PortSMTP;
+	private $SmtpUser;
+	private $SmtpPass;
+
 	/* Constructor */
 	function kkMailMessage(Core &$coreRef){
 		$this->kkCore = $coreRef;
@@ -78,6 +83,18 @@ class kkMailMessage{
 		$this->cc = $emailAddress;
 		//$this->cc = "spammy@kaiesh.com";
 	}
+	function setSMTPServer($user, $pass, $server, $port=25){
+		$this->SmtpServer = $SmtpServer;
+		$this->SmtpUser = base64_encode ($SmtpUser);
+		$this->SmtpPass = base64_encode ($SmtpPass);
+		$this->PortSmtp = $port;
+	}
+	function removeSMTP(){
+		$this->SmtpServer = null;
+		$this->SmtpUser = null;
+		$this->SmtpPass = null;
+		$this->PortSmtp = null;
+	}
 
 	function getTo(){
 		return $this->to;
@@ -109,6 +126,7 @@ class kkMailMessage{
 	function getUniqueRef(){
 		return $this->uniqueRef;
 	}
+
 
 	/* Object functionality */
 	function makeMessageReady(){
@@ -192,13 +210,43 @@ $msgbody .= '
 			@$lmResult = $this->kkCore->db($logMsg);
 			//the message can't simply be sent again, it needs to be recompiled!
 			$this->ready = false;
-			return mail($this->to, $this->subject, $this->fullMessage, $this->msgHeader);
-			//mail("spambox@kaiesh.com", $this->subject, $this->fullMessage, $this->msgHeader);
-			//$this->vmCore->getDebugger()->debug("Mail Message: Subject: ".$this->subject." || Header: ".$this->msgHeader);
-			//return true;
+
+			if ($this->SmtpServer){
+				return $this->SendMail();
+			}else{
+				return mail($this->to, $this->subject, $this->fullMessage, $this->msgHeader);
+			}
 		}else{
 			return false;
 		}
 	}
+
+
+	private function SendMail(){
+		if ($SMTPIN = fsockopen ($this->SmtpServer, $this->PortSMTP)){
+			fputs ($SMTPIN, "EHLO ".$HTTP_HOST."\r\n");
+			$talk["hello"] = fgets ( $SMTPIN, 1024 );
+			fputs($SMTPIN, "auth login\r\n");
+			$talk["res"]=fgets($SMTPIN,1024);
+			fputs($SMTPIN, $this->SmtpUser."\r\n");
+			$talk["user"]=fgets($SMTPIN,1024);
+			fputs($SMTPIN, $this->SmtpPass."\r\n");
+			$talk["pass"]=fgets($SMTPIN,256);
+			fputs ($SMTPIN, "MAIL FROM: <".$this->from.">\r\n");
+			$talk["From"] = fgets ( $SMTPIN, 1024 );
+			fputs ($SMTPIN, "RCPT TO: <".$this->to.">\r\n");
+			$talk["To"] = fgets ($SMTPIN, 1024);
+			fputs($SMTPIN, "DATA\r\n");
+			$talk["data"]=fgets( $SMTPIN,1024 );
+			fputs($SMTPIN, "To: <".$this->to.">\r\n".$this->messageHeader."\r\nSubject:".$this->subject."\r\n\r\n\r\n".$this->fullMessage."\r\n.\r\n");
+			$talk["send"]=fgets($SMTPIN,256);
+			//CLOSE CONNECTION AND EXIT ...
+			fputs ($SMTPIN, "QUIT\r\n");
+			fclose($SMTPIN);
+			//
+		}
+		return $talk;
+	}
+}
 }
 ?>
